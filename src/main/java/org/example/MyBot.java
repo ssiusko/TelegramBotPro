@@ -10,6 +10,8 @@ import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
+import static java.lang.Long.parseLong;
+
 public class MyBot extends TelegramLongPollingBot {
     public MyBot() {
         super("7002573080:AAG3UrF-MxRhGUrdJqw93iTOO1yUyP87lUY");
@@ -23,14 +25,31 @@ public class MyBot extends TelegramLongPollingBot {
 
         if (!textArray.isEmpty()) {
             for (String s : textArray) {
-                getMessage(s, chatId);
+                List<String> textArray2 = Arrays.asList(s.split(" "));
+
+                if (textArray2.size() == 2) {
+                    var amount = (int) parseLong(textArray2.get(1));
+                    getFullMessage(textArray2.get(0), chatId, amount);
+                } else {
+                    getFullMessage(s, chatId, 0);
+                }
+            }
+        } else {
+            List<String> textArray3 = Arrays.asList(text.split(" "));
+
+            if (textArray3.size() == 2) {
+                var amount = (int) parseLong(textArray3.get(1));
+                getFullMessage(textArray3.get(0), chatId, amount);
+            } else {
+                getFullMessage(text, chatId, 0);
             }
         }
     }
 
-    void sendPrice(long chatId, String name) throws Exception {
+    void sendPrice(long chatId, String name, long amount) throws Exception {
         var price = CryptoPrice.spotPrice(name);
-        sendMessage(chatId, name + " price: " + price.getAmount().doubleValue());
+        var availableAmount = amount > 0 ? "\n" + "can buy: " + (amount/price.getAmount().doubleValue()) : "";
+        sendMessage(chatId, name + " price: " + price.getAmount().doubleValue() + availableAmount);
     }
 
     void sendPicture(long chatId, String name) throws Exception {
@@ -49,7 +68,7 @@ public class MyBot extends TelegramLongPollingBot {
         execute(message);
     }
 
-    public void getMessage(String textMessage, Long chatId)  {
+    void getFullMessage(String textMessage, Long chatId, long amount)  {
         try {
             var message = new SendMessage();
             message.setChatId(chatId);
@@ -58,18 +77,18 @@ public class MyBot extends TelegramLongPollingBot {
                 sendMessage(chatId, "Hello!");
             } else if (textMessage.equals("btc")) {
                 sendPicture(chatId, "bitcoin.png");
-                sendPrice(chatId, "BTC");
+                sendPrice(chatId, "BTC", amount);
             } else if (textMessage.equals("eth")) {
                 sendPicture(chatId, "ethereum.png");
-                sendPrice(chatId, "ETH");
+                sendPrice(chatId, "ETH", amount);
             } else if (textMessage.equals("doge")) {
                 sendPicture(chatId, "dogecoin.png");
-                sendPrice(chatId, "DOGE");
+                sendPrice(chatId, "DOGE", amount);
             }else if (textMessage.equals("/all")) {
                 var priceBtc = CryptoPrice.spotPrice("BTC");
                 var priceEth = CryptoPrice.spotPrice("ETH");
                 var priceDoge = CryptoPrice.spotPrice("DOGE");
-                message.setText(
+                sendMessage(chatId,
                         "BTC price: " + priceBtc.getAmount().doubleValue() + "\n"
                                 + "ETH price: " + priceEth.getAmount().doubleValue() + "\n"
                                 + "DOGE price: " + priceDoge.getAmount().doubleValue()
@@ -78,7 +97,6 @@ public class MyBot extends TelegramLongPollingBot {
                 sendMessage(chatId, "Unknown command!");
             }
 
-            execute(message);
         } catch (Exception e) {
             System.out.println("Error!");
         }
